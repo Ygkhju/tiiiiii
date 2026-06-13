@@ -35,28 +35,28 @@ const ROLE_BADGE: Record<string, string> = {
 }
 
 export default function AdminPage() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const router   = useRouter()
   const [tab, setTab]             = useState<Tab>('overview')
   const [pending, setPending]     = useState(DEMO_PENDING)
   const [users, setUsers]         = useState(DEMO_USERS)
   const [commissions, setComms]   = useState(DEMO_COMMS)
   const [query, setQuery]         = useState('')
-  const [loading, setLoading]     = useState(false)
+  const [dataLoading, setDataLoading] = useState(false)
   const [previewDoc, setPreviewDoc] = useState<{ url: string; label: string } | null>(null)
   const [stats, setStats]         = useState({ restaurants: 24, users: 1248, orders: 4712, revenue: 6840 })
 
-  // Check admin role
+  // Check admin role — only redirect if user is loaded AND not admin
   useEffect(() => {
-    if (user && user.role !== 'admin') {
+    if (!authLoading && user && user.role !== 'admin') {
       router.push('/')
     }
-  }, [user])
+  }, [user, authLoading])
 
   // Load real pending
   useEffect(() => {
     const load = async () => {
-      setLoading(true)
+      setDataLoading(true)
       const { data } = await supabase.from('profiles').select('*').eq('status', 'pending').order('created_at')
       if (data?.length) setPending(data as any)
 
@@ -66,7 +66,7 @@ export default function AdminPage() {
       const { data: cd } = await supabase.from('commissions').select('*, restaurants(name)').order('created_at', { ascending: false }).limit(30)
       if (cd?.length) setComms(cd.map((c: any) => ({ ...c, restaurant_name: c.restaurants?.name, date: c.created_at?.slice(0,10) })))
 
-      setLoading(false)
+      setDataLoading(false)
     }
     load()
   }, [])
@@ -127,7 +127,7 @@ export default function AdminPage() {
             <ShieldCheck size={18} className="text-purple-400" />
             <span className="font-display font-bold">Admin Savora</span>
           </div>
-          {loading && <Loader2 size={16} className="ml-2 text-white/30 animate-spin" />}
+          {dataLoading && <Loader2 size={16} className="ml-2 text-white/30 animate-spin" />}
           <button onClick={async () => { await signOut(); router.push('/login') }}
             className="ml-auto grid h-9 w-9 place-items-center rounded-xl border border-white/[0.07] text-white/40 hover:text-red-400 transition-colors">
             <LogOut size={15} />
